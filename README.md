@@ -39,3 +39,9 @@ All flags (-d and the path flag) must go before your message, or they will be co
 <sub>
 Besides leaving quick notes when you have to leave fast, you could also use remindme to store the current state of a project that you may not come back to for years and years or so, although there may be an inverse correlation between length of time away and shortest possible message that can serve as an adequate mental refresher
 </sub>
+
+<br>
+
+<sub>
+For any programmers, the help.txt file is included using <code>xxd -c 256 -i help.txt</code>
+</sub>

@@ -1,0 +1,33 @@
+REMINDME help
+
+to save a reminder as a .remindme file in the current directory:
+remindme hello world this is a message
+
+to read back the .remindme file in the current directory (if any):
+remindme
+
+to delete the .remindme file in the current directory (if any):
+remindme -d
+
+
+include a path with -p [PATH]:
+
+to save a reminder at a specific path:
+remindme -p path/path/path hello world this is a message
+
+to read back the reminder at a specific path:
+remindme -p path/path/path
+
+to delete the reminder at a specific path:
+remindme -p path/path/path -d
+(order of path and -d do not matter)
+
+
+Flags must come before any text to save
+
+
+to print this help message again:
+
+remindme help
+
+(or -help, --help, -h, --h)
