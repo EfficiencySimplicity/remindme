@@ -14,6 +14,11 @@ unsigned char help_txt[] = {
 // Many thanks to ratonhnhaké:ton on the Code Cafe Discord server for help 
 // with memory safety and general advice; v0.0.1 needed the upgrade.
 
+// Many thanks to VicThor on the Code Cafe Discord server for
+// pointing out all the little flaws in v0.0.2
+
+// If you see an endofunctor anywhere here, KILL IT WITH FIRE
+
 // These were useful 
 // https://everything.explained.today/Bus_error/
 // https://stackoverflow.com/questions/72186275/trace-trap-when-using-strcat
@@ -24,17 +29,29 @@ unsigned char help_txt[] = {
 // A fun little exit-with-error function
 void whoops(char *msg) {
     fprintf(stderr, "%s\n", msg);
-    // // https://www.tutorialspoint.com/c_standard_library/c_function_exit.htm
+    // https://www.tutorialspoint.com/c_standard_library/c_function_exit.htm
     exit(EXIT_FAILURE);
+}
+
+void* whoops_if_null(void* item, char *msg) {
+    if (item == NULL) {
+        whoops(msg);
+    }
+    return item;
 }
 
 int file_length(FILE *f) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-    // Seek to the end, get the length, and seek back to the start
+    // Seek to the end, get the length, and rewind
     fseek(f, 0, SEEK_END);
     int length = ftell (f);
     rewind(f);
     return length;
+}
+
+// A (slightly) shorter way to compare 2 strings
+bool streq(char *s1, char *s2) {
+    return strcmp(s1, s2) == 0;
 }
 
 // This lets me concat strings easily without dealing with char array size limits
@@ -42,12 +59,11 @@ int file_length(FILE *f) {
 char* concat(char *s1, char *s2)
 {
     // https://www.w3schools.com/c/c_memory_reallocate.php
-    s1 = realloc(s1, strlen(s1) + strlen(s2) + 1); // +1 for the null-terminator
-
-    if (s1 == NULL) {
-        whoops("There was a malloc error! Sorry!");
-    }
-    
+    s1 = whoops_if_null(
+        realloc(s1, strlen(s1) + strlen(s2) + 1), // +1 for the null-terminator
+        "There was a memory allocation error! Sorry!"
+    );
+        
     strcat(s1, s2);
 
     // The original pointer must be set to this return value
@@ -62,28 +78,32 @@ int main(int argc, char *argv[]) {
     
     // Are we past flags and consuming text?
     bool text_specified = false;
-    char *text = malloc(1); // A null terminator!
+    char *text = calloc(sizeof(char), 0);
     // has the path flag been given already?
     bool path_specified = false;
     char *path = strdup("./");
     bool delete = false;
     bool help = false;
 
+    // Test for the --help command and run it
     if (argc > 1) {
         if (
-            strcmp(argv[1], "-h") == 0 || 
-            strcmp(argv[1], "--h") == 0 ||
-            strcmp(argv[1], "-help") == 0 ||
-            strcmp(argv[1], "--help") == 0 ||
-            strcmp(argv[1], "help") == 0
+            streq(argv[1], "--h") ||
+            streq(argv[1], "-h") || 
+            streq(argv[1], "-help") ||
+            streq(argv[1], "--help") ||
+            streq(argv[1], "help")
         ) {
             if (argc > 2) {
                 whoops("You can't use any extra arguments when asking for help");
             }
 
             printf("%s", help_txt);
+            exit(EXIT_SUCCESS);
         }
     }
+
+    // Guess Mr. Fancy Pants doesn't need help.
 
     // Gather the args
     for (int i = 1; i < argc; i++) {
@@ -91,13 +111,17 @@ int main(int argc, char *argv[]) {
             // https://www.geeksforgeeks.org/c/concatenating-two-strings-in-c/
             // Oh noooo what if we are on the first word? 
             // we will have a trailing space! NOOOOOO!
-            // never fear, when we first hit text we add the first word manually
+            // AW WAIT text isn't even SET to anything yet! ABANDON SH-
+            // STOP! Everything's fine!
+            // never fear, when we first hit text we add the first word manually!
+            // WOW, thank you, CommentMan! You think of everything!
+            // *awards ceremony*
             text = concat(concat(text, " "), argv[i]);
             continue;
         }
 
         // https://www.geeksforgeeks.org/c/strcmp-in-c/
-        if (strcmp(argv[i], "-p") == 0) {
+        if (streq(argv[i], "-p")) {
 
             // Ok, we need to parse the path flag...
             // some quick checks first:
@@ -107,14 +131,14 @@ int main(int argc, char *argv[]) {
             if (argc <= i+1) {
                 whoops("You must provide the path to the .remindme file");
             }
-            // advance to the next char!
+            // advance to the next arg!
             i ++;
 
             // Now that we're sure we can accept the path, we do so!
             path = concat(strdup(argv[i]), "/");
             path_specified = true;
 
-        } else if (strcmp(argv[i], "-d") == 0) {
+        } else if (streq(argv[i], "-d")) {
 
             if (delete) {
                 whoops("You can't delete a file twice, dummy!");
@@ -140,11 +164,11 @@ int main(int argc, char *argv[]) {
 
 
     // ACT 2
-    // The act where we act on those arguments
+    // The act where we act on those arguments (unless we did --help, --help exits early)
     // Starring: fopen(), fread(), fseek(), fprintf()
+    // And the indomitable, the amazing, whoops_if_null()
 
 
-    // https://www.geeksforgeeks.org/c/format-specifiers-in-c/
     if (delete) {
         // https://www.geeksforgeeks.org/c/c-program-delete-file/
         if (remove(path) != 0) {
@@ -155,32 +179,40 @@ int main(int argc, char *argv[]) {
         // We are being asked to remind the user
         // https://stackoverflow.com/questions/12318866/relative-path-in-c-file-handling
         // https://www.geeksforgeeks.org/c/c-program-to-read-contents-of-whole-file/
-        FILE *f = fopen(path, "r");
-
-        if (f == NULL) {
-            whoops("I couldn't get any .remindme files in this directory");
-        }
+        FILE *f = whoops_if_null(
+            fopen(path, "r"),
+            "I couldn't get any .remindme files in this directory"
+        );
 
         int length = file_length(f);
 
         // Write to the buffer and close the file
-        char *buffer = malloc (length);
-        if (buffer)
-        {
-            fread (buffer, 1, length, f);
-        }
+        char *buffer = whoops_if_null(
+            calloc (length, sizeof(char)),
+            "There was a memory allocation error! Sorry!"
+        );
+        fread (buffer, 1, length, f);
         fclose (f);
 
-        printf("%s\n", buffer);
+        printf("%.*s\n", length, buffer);
+        free(buffer);
+
     } else if (text_specified) {
-        FILE *f = fopen(path, "w");
+        FILE *f = whoops_if_null(
+            fopen(path, "w"),
+            "I couldn't get any .remindme files in this directory"
+        );
 
-        if (f == NULL) {
-            whoops("I couldn't get any .remindme files in this directory");
-        }
-
+    
+        // https://www.geeksforgeeks.org/c/format-specifiers-in-c/
         fprintf(f, "%s", text);
+        fclose(f);
     }
+
+    // We need to free before happy exit;
+    // Before whoops() there is no need
+    free(path);
+    free(text);
 
     exit(EXIT_SUCCESS);
 }
