@@ -7,7 +7,7 @@ and want to remember what you were doing when you come back in a week from savin
 creating a reminder:
 
 ```
-remindme currently working on unit tests for the email sending API, specifically the HELO headers.
+remindme that Im currently working on unit tests for the email sending API, specifically the HELO headers.
 ```
 
 This creates a .remindme file in the current directory.
@@ -21,20 +21,14 @@ remindme
 To delete a .remindme file, type:
 
 ```
-remindme -d
+remindme delete
 ```
 
-For all of the above, you can specify a path parameter if you want to store a reminder somewhere other than the current directory.
+to add .remindme to your .gitignore, type:
 
 ```
-remindme -p subfolder/subsubfolder currently working on blah blah blah
-
-remindme -p subfolder/subsubfolder
-
-remindme -p subfolder/subsubfolder -d
+remindme delete
 ```
-
-All flags (-d and the path flag) must go before your message, or they will be counted as part of it.
 
 You can also access help:
 
