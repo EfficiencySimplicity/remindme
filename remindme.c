@@ -25,6 +25,9 @@ unsigned char help_txt[] = {
 // https://www.w3schools.com/c/c_booleans.php
 // https://stackoverflow.com/questions/26950411/how-to-distinguish-a-malloced-string-from-a-string-literal
 
+// These should be kept in mind
+// https://www.geeksforgeeks.org/c/perror-in-c/
+
 // I have /ns at the end of printfs because otherwise the printing has a % at the end
 // https://www.reddit.com/r/learnprogramming/comments/gzvus1/question_whenever_i_run_a_c_programcompiled_with/
 
@@ -72,33 +75,46 @@ char* concat(char *s1, char *s2)
     return s1;
 }
 
-bool is_create_reminder(int argc, char *argv) {
+
+bool is_create_reminder(int argc, char *argv[]) {
     return argc > 1 && (
         streq(argv[1], "that") ||
         streq(argv[1], "to")
     );
 }
 
-bool is_print_reminder(int argc, char *argv) {
+bool is_print_reminder(int argc, char *argv[]) {
     return argc == 1;
 }
 
-bool is_delete_reminder(int argc, char *argv) {
+bool is_delete_reminder(int argc, char *argv[]) {
     return argc > 1 && streq(argv[1], "delete");
 }
 
-bool is_help(int argc, char *argv) {
-    return argc > 1 && streq(argv[1], "help");
+bool is_ignore(int argc, char *argv[]) {
+    return argc > 1 && streq(argv[1], "ignore");
 }
 
-void parse_create_reminder(int argc, char *argv) {
-    char *text = strdup(argv[1]);
+bool is_help(int argc, char *argv[]) {
+    return argc > 1 && (
+        streq(argv[1], "--h") ||
+        streq(argv[1], "-h") || 
+        streq(argv[1], "-help") ||
+        streq(argv[1], "--help") ||
+        streq(argv[1], "help")
+    );
+}
+
+
+void parse_create_reminder(int argc, char *argv[]) {
+    char *text = strdup("");
 
     for (int i=2; i < argc; i++) {
-        text = concat(concat(text, " "), argv[i]);
+        if (i > 2) {text = concat(text, " ");}
+        text = concat(text, argv[i]);
     }
     
-    char *path = "./";
+    char *path = "./.remindme";
 
     FILE *f = whoops_if_null(
         fopen(path, "w"),
@@ -106,25 +122,26 @@ void parse_create_reminder(int argc, char *argv) {
     );
 
     // https://www.geeksforgeeks.org/c/format-specifiers-in-c/
-    fprintf(f, "%s", text);
+    fputs(text, f);
     fclose(f);
 
     free(text);
 }
 
-void parse_delete_reminder(int argc, char *argv) {
+void parse_delete_reminder(int argc, char *argv[]) {
+    if (argc > 2) {whoops("You can't use any extra arguments in `remindme delete`");}
     // https://www.geeksforgeeks.org/c/c-program-delete-file/
-    if (remove("./") != 0) {
+    if (remove("./.remindme") != 0) {
         whoops("I couldn't delete any .remindme files in this directory");
     }
 }
 
-void parse_print_reminder(int argc, char *argv) {
+void parse_print_reminder(int argc, char *argv[]) {
     // We are being asked to remind the user
     // https://stackoverflow.com/questions/12318866/relative-path-in-c-file-handling
     // https://www.geeksforgeeks.org/c/c-program-to-read-contents-of-whole-file/
     FILE *f = whoops_if_null(
-        fopen("./", "r"),
+        fopen("./.remindme", "r"),
         "I couldn't get any .remindme files in this directory"
     );
 
@@ -142,66 +159,42 @@ void parse_print_reminder(int argc, char *argv) {
     free(buffer);
 }
 
+void parse_ignore(int argc, char *argv[]) {
+    if (argc > 2) {whoops("You can't use any extra arguments in `remindme ignore`");}
+
+    FILE *f = whoops_if_null(
+        fopen("./.gitignore", "r+"),
+        "I couldn't get any .gitignore files in this directory"
+    );
+
+    // This is all we need to hold ".remindme"
+    char line[10];
+
+    // https://www.geeksforgeeks.org/c/read-a-file-line-by-line-in-c/
+    while (fgets(line, sizeof(line), f)) {
+        if (streq(line, ".remindme")) {
+            whoops(".remindme is already in the .gitignore in this directory");
+        }
+    }
+
+    // https://stackoverflow.com/questions/5690979/when-should-i-use-fputs-instead-of-fprintf
+    fputs("\n.remindme", f);
+}
+
+void parse_help(int argc, char *argv[]) {
+    if (argc > 2) {whoops("You can't use any extra arguments when asking for help");}
+    printf("%s", help_txt);
+}
+
 // https://www.geeksforgeeks.org/cpp/command-line-arguments-in-c-cpp/
 int main(int argc, char *argv[]) {
 
     if (is_create_reminder(argc, argv)) {parse_create_reminder(argc, argv);}
     else if (is_delete_reminder(argc, argv)) {parse_delete_reminder(argc, argv);}
-    else if (is_help(argc, argv)) {parse_help(argcm argv);}
-
-    path = concat(path, ".remindme");
-
-
-    // ACT 2
-    // The act where we act on those arguments (unless we did --help, --help exits early)
-    // Starring: fopen(), fread(), fseek(), fprintf()
-    // And the indomitable, the amazing, whoops_if_null()
-
-
-    if (delete) {
-        // https://www.geeksforgeeks.org/c/c-program-delete-file/
-        if (remove(path) != 0) {
-            whoops("I couldn't delete any .remindme files at that path");
-        }
-
-    } else if (!text_specified) {
-        // We are being asked to remind the user
-        // https://stackoverflow.com/questions/12318866/relative-path-in-c-file-handling
-        // https://www.geeksforgeeks.org/c/c-program-to-read-contents-of-whole-file/
-        FILE *f = whoops_if_null(
-            fopen(path, "r"),
-            "I couldn't get any .remindme files in this directory"
-        );
-
-        int length = file_length(f);
-
-        // Write to the buffer and close the file
-        char *buffer = whoops_if_null(
-            calloc (length, sizeof(char)),
-            "There was a memory allocation error! Sorry!"
-        );
-        fread (buffer, 1, length, f);
-        fclose (f);
-
-        printf("%.*s\n", length, buffer);
-        free(buffer);
-
-    } else if (text_specified) {
-        FILE *f = whoops_if_null(
-            fopen(path, "w"),
-            "I couldn't get any .remindme files in this directory"
-        );
-
-    
-        // https://www.geeksforgeeks.org/c/format-specifiers-in-c/
-        fprintf(f, "%s", text);
-        fclose(f);
-    }
-
-    // We need to free before happy exit;
-    // Before whoops() there is no need
-    free(path);
-    free(text);
+    else if (is_help(argc, argv)) {parse_help(argc, argv);}
+    else if (is_ignore(argc, argv)) {parse_ignore(argc, argv);}
+    else if (is_print_reminder(argc, argv)) {parse_print_reminder(argc, argv);}
+    else {printf("Invalid arguments; check out `remindme help` for info");}
 
     exit(EXIT_SUCCESS);
 }

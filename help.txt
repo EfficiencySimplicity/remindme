@@ -1,33 +1,21 @@
 REMINDME help
 
 to save a reminder as a .remindme file in the current directory:
-remindme hello world this is a message
+    remindme [that/to] [message]
+examples:
+    remindme that I need to get the API working
+    remindme to do unit tests tomorrow
 
 to read back the .remindme file in the current directory (if any):
-remindme
+    remindme
 
 to delete the .remindme file in the current directory (if any):
-remindme -d
+    remindme delete
 
+to add .remindme to the .gitignore in the current directory (if any):
+    remindme ignore
 
-include a path with -p [PATH]:
-
-to save a reminder at a specific path:
-remindme -p path/path/path hello world this is a message
-
-to read back the reminder at a specific path:
-remindme -p path/path/path
-
-to delete the reminder at a specific path:
-remindme -p path/path/path -d
-(order of path and -d do not matter)
-
-
-Flags must come before any text to save
-
-
-to print this help message again:
-
-remindme help
-
+to print this help message:
+    remindme help
 (or -help, --help, -h, --h)
+
