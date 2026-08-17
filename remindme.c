@@ -21,7 +21,9 @@ unsigned char help_txt[] = {
 
 // These were useful 
 // https://everything.explained.today/Bus_error/
-// https://stackoverflow.com/questions/72186275/trace-trap-when-using-strcat
+// https://stackoverflow.com/questions/72186275/trace-trap-when-using-
+// https://www.w3schools.com/c/c_booleans.php
+// https://stackoverflow.com/questions/26950411/how-to-distinguish-a-malloced-string-from-a-string-literal
 
 // I have /ns at the end of printfs because otherwise the printing has a % at the end
 // https://www.reddit.com/r/learnprogramming/comments/gzvus1/question_whenever_i_run_a_c_programcompiled_with/
@@ -70,95 +72,82 @@ char* concat(char *s1, char *s2)
     return s1;
 }
 
+bool is_create_reminder(int argc, char *argv) {
+    return argc > 1 && (
+        streq(argv[1], "that") ||
+        streq(argv[1], "to")
+    );
+}
+
+bool is_print_reminder(int argc, char *argv) {
+    return argc == 1;
+}
+
+bool is_delete_reminder(int argc, char *argv) {
+    return argc > 1 && streq(argv[1], "delete");
+}
+
+bool is_help(int argc, char *argv) {
+    return argc > 1 && streq(argv[1], "help");
+}
+
+void parse_create_reminder(int argc, char *argv) {
+    char *text = strdup(argv[1]);
+
+    for (int i=2; i < argc; i++) {
+        text = concat(concat(text, " "), argv[i]);
+    }
+    
+    char *path = "./";
+
+    FILE *f = whoops_if_null(
+        fopen(path, "w"),
+        "I couldn't get any .remindme files in this directory"
+    );
+
+    // https://www.geeksforgeeks.org/c/format-specifiers-in-c/
+    fprintf(f, "%s", text);
+    fclose(f);
+
+    free(text);
+}
+
+void parse_delete_reminder(int argc, char *argv) {
+    // https://www.geeksforgeeks.org/c/c-program-delete-file/
+    if (remove("./") != 0) {
+        whoops("I couldn't delete any .remindme files in this directory");
+    }
+}
+
+void parse_print_reminder(int argc, char *argv) {
+    // We are being asked to remind the user
+    // https://stackoverflow.com/questions/12318866/relative-path-in-c-file-handling
+    // https://www.geeksforgeeks.org/c/c-program-to-read-contents-of-whole-file/
+    FILE *f = whoops_if_null(
+        fopen("./", "r"),
+        "I couldn't get any .remindme files in this directory"
+    );
+
+    int length = file_length(f);
+
+    // Write to the buffer and close the file
+    char *buffer = whoops_if_null(
+        calloc (length, sizeof(char)),
+        "There was a memory allocation error! Sorry!"
+    );
+    fread (buffer, 1, length, f);
+    fclose (f);
+
+    printf("%.*s\n", length, buffer);
+    free(buffer);
+}
+
 // https://www.geeksforgeeks.org/cpp/command-line-arguments-in-c-cpp/
 int main(int argc, char *argv[]) {
 
-    // https://www.w3schools.com/c/c_booleans.php
-    // https://stackoverflow.com/questions/26950411/how-to-distinguish-a-malloced-string-from-a-string-literal
-    
-    // Are we past flags and consuming text?
-    bool text_specified = false;
-    char *text = calloc(sizeof(char), 0);
-    // has the path flag been given already?
-    bool path_specified = false;
-    char *path = strdup("./");
-    bool delete = false;
-    bool help = false;
-
-    // Test for the --help command and run it
-    if (argc > 1) {
-        if (
-            streq(argv[1], "--h") ||
-            streq(argv[1], "-h") || 
-            streq(argv[1], "-help") ||
-            streq(argv[1], "--help") ||
-            streq(argv[1], "help")
-        ) {
-            if (argc > 2) {
-                whoops("You can't use any extra arguments when asking for help");
-            }
-
-            printf("%s", help_txt);
-            exit(EXIT_SUCCESS);
-        }
-    }
-
-    // Guess Mr. Fancy Pants doesn't need help.
-
-    // Gather the args
-    for (int i = 1; i < argc; i++) {
-        if (text_specified) {
-            // https://www.geeksforgeeks.org/c/concatenating-two-strings-in-c/
-            // Oh noooo what if we are on the first word? 
-            // we will have a trailing space! NOOOOOO!
-            // AW WAIT text isn't even SET to anything yet! ABANDON SH-
-            // STOP! Everything's fine!
-            // never fear, when we first hit text we add the first word manually!
-            // WOW, thank you, CommentMan! You think of everything!
-            // *awards ceremony*
-            text = concat(concat(text, " "), argv[i]);
-            continue;
-        }
-
-        // https://www.geeksforgeeks.org/c/strcmp-in-c/
-        if (streq(argv[i], "-p")) {
-
-            // Ok, we need to parse the path flag...
-            // some quick checks first:
-            if (path_specified) {
-                whoops("You can only give the path parameter once");
-            }
-            if (argc <= i+1) {
-                whoops("You must provide the path to the .remindme file");
-            }
-            // advance to the next arg!
-            i ++;
-
-            // Now that we're sure we can accept the path, we do so!
-            path = concat(strdup(argv[i]), "/");
-            path_specified = true;
-
-        } else if (streq(argv[i], "-d")) {
-
-            if (delete) {
-                whoops("You can't delete a file twice, dummy!");
-            }
-            delete = true;
-
-        } else {
-
-            // So we've got past the flags and are about to being text collecting
-
-            if (delete) {
-                whoops("You cannot create a reminder and delete one in the same command");
-            } else {
-                // Add the first word to text!
-                text_specified = true;
-                text = strdup(argv[i]);
-            }
-
-        }
-    }
+    if (is_create_reminder(argc, argv)) {parse_create_reminder(argc, argv);}
+    else if (is_delete_reminder(argc, argv)) {parse_delete_reminder(argc, argv);}
+    else if (is_help(argc, argv)) {parse_help(argcm argv);}
 
     path = concat(path, ".remindme");
 
