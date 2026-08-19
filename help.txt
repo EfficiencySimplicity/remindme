@@ -14,6 +14,13 @@ to delete the .remindme file in the current directory (if any):
 
 to add .remindme to the .gitignore in the current directory (if any):
     remindme ignore
+it by default sets ignore to 'on', but you can specify:
+    remindme ignore on
+    remindme ignore off
+
+to hook remindme into zsh so that it calls ever time you change directory:
+    remindme pester
+this also accepts 'on' or 'off' as a second argument
 
 to print this help message:
     remindme help

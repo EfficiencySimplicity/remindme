@@ -27,7 +27,13 @@ remindme delete
 to add .remindme to your .gitignore, type:
 
 ```
-remindme delete
+remindme ignore
+```
+
+to hook remindme into zsh so that it calls on every directory change, type:
+
+```
+remindme pester
 ```
 
 You can also access help:
@@ -44,5 +50,5 @@ Besides leaving quick notes when you have to leave fast, you could also use remi
 <br>
 
 <sub>
-For any programmers, the help.txt file is included using <code>xxd -c 256 -i help.txt</code>
+For any programmers, the help.txt file (and all text files included in remindme.c) are included using <code>xxd -c 256 -i</code>
 </sub>
